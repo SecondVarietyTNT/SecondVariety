@@ -1,5 +1,0 @@
-Type=obj.Type,
-Period=Helper.FromDateTime(obj.Period),
-Value=obj.Value??-1,
-Id=obj.Id,
-KodObject=obj.KodObject??-1,

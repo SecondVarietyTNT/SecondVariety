@@ -1,5 +1,0 @@
-int32 KodObject =1 ; 
-google.protobuf.Timestamp Data = 2 ;
-float Val =3 ; 
-int32 Id =4 ; 
-??? Object? = 5;
