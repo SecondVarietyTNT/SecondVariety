@@ -1,4 +1,5 @@
-# secondVariety
+# SecondVariety
+К ХАКАТОНУ чемпионата
 
 # Для публикации создать 2 docker контейнера^
 - dockerfile в корне проекта
