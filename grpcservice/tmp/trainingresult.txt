@@ -1,0 +1,7 @@
+        public int Id { get; set; }
+        public int? KodObject { get; set; }
+        public float? MinVal { get; set; }
+        public float? MaxVal { get; set; }
+        public float? MedVal { get; set; }
+        public float? GradVal { get; set; }
+        public int? Type { get; set; }

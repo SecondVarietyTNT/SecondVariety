@@ -1,0 +1,179 @@
+﻿@page "/requests"
+
+@using Microsoft.EntityFrameworkCore
+@using SecondVariety.Models;
+
+
+@inject NavigationManager nav
+
+@inject ContextMenuService ContextMenuService
+@inject GrpcClientService grpcClient 
+
+  <h1>Заявки</h1>
+  <div class="row gap-3">
+    <RadzenFieldset Text="Действия" class="gap-3">
+      <RadzenButton Click=@OnAddNewClick Text="Создать" Icon="add_circle_outline" ButtonStyle="ButtonStyle.Primary" />
+      <RadzenButton Click=@OnEditClick Text="Редактировать" Disabled=@isSelected() Icon="save" ButtonStyle="ButtonStyle.Secondary" />
+      <RadzenButton Click=@OnDeleteClick Text="Удалить" Disabled=@isSelected() Icon="report" ButtonStyle="ButtonStyle.Danger" />
+    </RadzenFieldset>
+  </div>
+  <div class="row gap-3">
+    <RadzenDataGrid 
+      AllowFiltering="true" 
+      AllowSorting="true" 
+      PageSize="10" 
+      ShowPagingSummary="true"
+      Data="@myRequests" 
+      TItem="RequestDTO"
+      EmptyText="Нет данных по объектам"
+      AllColumnsText="Все колонки"
+      ColumnsShowingText="Колонок"
+      DoesNotContainText="Нет данных по объектам"
+      PagingSummaryFormat="Страница {0} из {1}"
+
+      IsLoading="@isLoading"
+      SelectionMode="DataGridSelectionMode.Single"
+      PagerHorizontalAlign="HorizontalAlign.Center"
+      @bind-Value=@selected 
+      CellContextMenu="@OnCellContextMenu"
+      >
+      <Columns>
+          <RadzenDataGridColumn TItem="RequestDTO" Property="Num" Title="Номер" Width="75px" TextAlign="TextAlign.Center" />
+          <RadzenDataGridColumn TItem="RequestDTO" Property="Data" Title="Дата" FormatString="{0:d}" Width="150px" />
+          <RadzenDataGridColumn TItem="RequestDTO" Property="KodObject" Title="Код объекта" Width="50px"/>
+          <RadzenDataGridColumn TItem="RequestDTO" Property="NameObject" Title="Наименование объекта" Width="150px"/>
+          <RadzenDataGridColumn TItem="RequestDTO" Property="DateFrom" Title="Дата начала работ(план)" FormatString="{0:d}" Width="150px"/>
+          <RadzenDataGridColumn TItem="RequestDTO" Property="DateTo" Title="Дата окончания работ(план)" FormatString="{0:d}" Width="150px"/>
+          <RadzenDataGridColumn TItem="RequestDTO" Property="DateFromFakt" Title="Дата начала работ(факт)" FormatString="{0:d}" Width="150px"/>
+          <RadzenDataGridColumn TItem="RequestDTO" Property="DateToFakt" Title="Дата окончания работ(факт)" FormatString="{0:d}" Width="150px"/>
+          <RadzenDataGridColumn TItem="RequestDTO" Property="Status" Title="Статус" Width="120px" >
+            <Template Context="status">
+              <p>@GetDisplayName(status)</p>
+            </Template>
+          </RadzenDataGridColumn>
+      </Columns>
+    </RadzenDataGrid>
+  </div>
+  <div class="row gap-3">
+    <RadzenCard class="console-message">
+      <span class="console-message-text">*Для редактирования таблицы, используйте правую кнопку мыши.</span>
+    </RadzenCard>
+  </div>
+
+  
+@code {
+  //EventConsole console;
+  [CascadingParameter]
+  private Task<AuthenticationState> authenticationStateTask { get; set; }
+
+  private System.Security.Claims.ClaimsPrincipal? User ;
+  private IEnumerable<RequestDTO> myRequests = Enumerable.Empty<RequestDTO>();
+  private bool isLoading;
+  IList<RequestDTO> selected;
+
+  protected override async Task OnInitializedAsync()
+  {
+    await base.OnInitializedAsync();
+    await LoadData();
+  }
+
+  async Task LoadData()
+  {
+    isLoading = true;
+
+    await Task.Yield();
+    User = (await authenticationStateTask).User;
+    if(!User.IsInRole("Administrator")&&!User.IsInRole("Manager"))
+      return ;
+
+    var reqs = grpcClient.GetRequests() ;
+    var objs = grpcClient.GetObjects() ;
+
+    myRequests = (from r in reqs
+                  join o in objs on r.KodObject equals o.Id
+                  select new RequestDTO
+                {
+                  Num = r.Num,
+                  Data = r.Data,
+                  KodObject = r.KodObject,
+                  NameObject = o.Name??"",
+                  DateFrom = r.DateFrom,
+                  DateTo = r.DateTo,
+                  DateFromFakt = r.DateFromFakt,
+                  DateToFakt = r.DateToFakt,
+                  Status = (Models.StatusTypes)(r.Status??0),
+                  Id = r.Id
+                })
+                .OrderBy(o => o.Num)
+                .AsEnumerable();
+
+    isLoading = false;
+  }
+
+  void OnAddNewClick()
+  {
+    nav.NavigateTo("/requests/new", false);
+  }
+
+  void OnEditClick()
+  {
+    if (User?.IsInRole("Administrator") == true)
+    {
+      nav.NavigateTo($"/requests/edit/{selected[0].Id}", false);
+    }
+  }
+
+  void OnDeleteClick()
+  {
+    if (User?.IsInRole("Administrator") == true)
+    {
+      Delete(selected[0].Id);
+    }
+  }
+
+  bool isSelected()
+  {
+    return !(selected?.Any() == true);
+  }
+
+  void Delete(long? num)
+  {
+    if (!num.HasValue)
+      return;
+
+    if(num!=null)
+      grpcClient.DeleteRequest(num??-1) ;
+
+    nav.NavigateTo("/requests", false);
+  }
+
+  void OnCellContextMenu(DataGridCellMouseEventArgs<RequestDTO> args)
+  {
+    selected = new List<RequestDTO>() { args.Data };
+
+    ContextMenuService.Open(args,
+        new List<ContextMenuItem> {
+              new ContextMenuItem(){ Text = "Редактировать", Value = 1 },
+              new ContextMenuItem(){ Text = "Удалить", Value = 2 },
+          }, 
+          (e) => { 
+            switch (e.Value)
+            {
+              case 1:
+                nav.NavigateTo($"/requests/edit/{args.Data.Id}", false);
+                break;
+              case 2:
+                Delete(args.Data.Id);
+                break;
+            }
+
+            //console.Log($"e: {e.Value}. args: {args.Data.Num}."); 
+          }
+        );
+  }
+
+  string GetDisplayName(RequestDTO r)
+  {
+    return r.Status.GetDisplayDescription();
+  }
+}

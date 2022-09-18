@@ -1,0 +1,5 @@
+obj.Type=obj.Type;
+obj.Period = Helper.ToMoscowFromTimeStamp(request.Period) ;
+obj.Value=request.Value;
+obj.Id=obj.Id;
+obj.KodObject=request.KodObject;

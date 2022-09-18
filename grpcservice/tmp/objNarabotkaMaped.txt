@@ -1,0 +1,5 @@
+obj.KodObject=request.KodObject;
+obj.Data = Helper.ToMoscowDateOnlyFromTimeStamp(request.Data) ;
+obj.Val=request.Val;
+obj.Id=obj.Id;
+obj.Object?=obj.Object?;

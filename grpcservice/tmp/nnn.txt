@@ -1,0 +1,1 @@
+ ssh -i ~/.ssh/yandex yc-user@51.250.109.24

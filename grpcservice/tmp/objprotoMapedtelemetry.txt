@@ -1,0 +1,5 @@
+int32 Type =1 ; 
+google.protobuf.Timestamp Period = 2 ;
+float Value =3 ; 
+int32 Id =4 ; 
+int32 KodObject =5 ; 

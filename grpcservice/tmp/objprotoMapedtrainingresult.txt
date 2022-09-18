@@ -1,0 +1,7 @@
+int32 Id =1 ; 
+int32 KodObject =2 ; 
+float MinVal =3 ; 
+float MaxVal =4 ; 
+float MedVal =5 ; 
+float GradVal =6 ; 
+int32 Type =7 ; 

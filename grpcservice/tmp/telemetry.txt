@@ -1,0 +1,5 @@
+        public int Type { get; set; }
+        public DateTime? Period { get; set; }
+        public float? Value { get; set; }
+        public int Id { get; set; }
+        public int? KodObject { get; set; }

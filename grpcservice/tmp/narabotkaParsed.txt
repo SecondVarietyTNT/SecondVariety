@@ -1,0 +1,5 @@
+KodObject=obj.KodObject??-1,
+Data=obj.Data,
+Val=obj.Val??-1,
+Id=obj.Id,
+Object?=obj.Object?,

@@ -1,0 +1,102 @@
+﻿@page "/scheduler"
+@using System.Linq.Dynamic.Core
+@using System.ComponentModel.DataAnnotations
+@using SecondVariety.Models
+@using Object = SecondVariety.Models.Object
+@using System.Drawing
+
+@inject NavigationManager nav
+@inject GrpcClientService grpcClient
+@inject DialogService dialogService
+
+<div class="row gap-3">
+  <div class="col">
+    <RadzenFieldset Text="План работ" class="gap-3">
+      <RadzenScheduler 
+          @ref=@scheduler
+          Style="height:1300px"
+          SlotRender=@OnSlotRender  
+          TItem="RequestDTO" 
+          Data=@requests
+          StartProperty="DateFromFakt"
+          EndProperty="DateToFakt"
+          TextProperty="NameObject"
+          SelectedIndex="0"
+          AppointmentRender=@OnAppointmentRender
+          TodayText="Сегодня"
+          
+          Culture="@culture"
+      >
+
+        <RadzenMonthView Text="" MoreText="еще..."/>
+      </RadzenScheduler>
+    </RadzenFieldset>
+  </div>
+</div>
+
+
+@code {
+  [CascadingParameter]
+  private Task<AuthenticationState> authenticationStateTask { get; set; }
+  System.Globalization.CultureInfo culture = new System.Globalization.CultureInfo("ru-RU");
+
+  private System.Security.Claims.ClaimsPrincipal? User;
+  RadzenScheduler<RequestDTO>? scheduler;
+  EventConsole console;
+  Dictionary<DateTime, string> events = new Dictionary<DateTime, string>();
+  IList<RequestDTO> requests;
+
+  protected override async Task OnInitializedAsync()
+  {
+    await base.OnInitializedAsync();
+
+    var reqs = grpcClient.GetRequests();
+    var objs = grpcClient.GetObjects();
+
+    requests = (from r in reqs
+                join o in objs on r.KodObject equals o.Id
+                select new RequestDTO
+                    {
+                      Num = r.Num,
+                      Data = r.Data,
+                      KodObject = r.KodObject,
+                      NameObject = String.Format("Заявка {0} по объекту {1}", r.Num, o.Name),
+                      DateFrom = r.DateFrom,
+                      DateTo = r.DateTo,
+                      DateFromFakt = r.DateFromFakt,
+                      DateToFakt = r.DateToFakt,
+                      Status = (Models.StatusTypes)(r.Status ?? 0),
+                      Id = r.Id
+                    })
+                .OrderBy(o => o.Num)
+                .ToList();
+  }
+
+  void OnSlotRender(SchedulerSlotRenderEventArgs args)
+  {
+    // Highlight today in month view
+    if (args.View.Text == "Month" && args.Start.Date == DateTime.Today)
+    {
+      args.Attributes["style"] = "background: rgba(255,220,40,.2);";
+    }
+
+    // Highlight working hours (9-18)
+    if ((args.View.Text == "Week" || args.View.Text == "Day") && args.Start.Hour > 8 && args.Start.Hour < 19)
+    {
+      args.Attributes["style"] = "background: rgba(255,220,40,.2);";
+    }
+  }
+
+
+
+  void OnAppointmentRender(SchedulerAppointmentRenderEventArgs<RequestDTO> args)
+  {
+    // Never call StateHasChanged in AppointmentRender - would lead to infinite loop
+    Random rnd = new Random();
+    //Color randomColor = Color.FromArgb(rnd.Next(256), rnd.Next(256), rnd.Next(256));
+    string color = String.Format("#{0:X6}", rnd.Next(0x1000000) & 0x7F7F7F);
+
+    args.Attributes["style"] = String.Format("background:{0}", color);
+
+    }
+}
